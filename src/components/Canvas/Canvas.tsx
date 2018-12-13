@@ -1,30 +1,43 @@
 import * as React from "react";
-import Walker from "../../elements/Walker";
-import MouseWalker from "../../elements/MouseWalker";
 import { CanvasProps, CanvasState } from './CanvasInterfaces';
 import CreatureInterface from "../../elements/CreatureInterface";
+import {pageCreatureMapping} from '../../constants/pages';
+import cloneDeep from 'lodash.clonedeep';
 
 export default class Canvas extends React.Component<CanvasProps, CanvasState> {
     private canvasRef = React.createRef<HTMLCanvasElement>();
+    private pageCreatureMapping: { [key: string]: CreatureInterface[] } = pageCreatureMapping;
+
     constructor(props: CanvasProps) {
         super(props);
         this.state = {
             ctx: null,
             mouseX: 0,
             mouseY: 0,
-            creatures: [
-                new Walker(this.props.width / 2, this.props.height / 2),
-                new MouseWalker(this.props.width / 2, this.props.height / 2)
-            ]
+            currentCreatures: cloneDeep(this.pageCreatureMapping[this.props.currentPage])
         }
     }
 
     draw(): void {
-        this.state.creatures.forEach((creature:CreatureInterface) => {
+        const { currentCreatures } = this.state;
+        currentCreatures.forEach((creature:CreatureInterface) => {
             creature.step(this.state);
             creature.display(this.state);
         });
         window.requestAnimationFrame(() => this.draw());
+    }
+
+    componentWillReceiveProps(nextProps: CanvasProps): void {
+        const { ctx } = this.state;
+        if (nextProps.currentPage !== this.props.currentPage) {
+            if (ctx) {
+                ctx.clearRect(0, 0, this.props.width, this.props.height);
+            }
+            this.setState((oldState) => ({
+                ...oldState,
+                currentCreatures: cloneDeep(this.pageCreatureMapping[nextProps.currentPage])
+            }));
+        }
     }
 
     componentDidMount():void {
