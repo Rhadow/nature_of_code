@@ -1,5 +1,6 @@
 import * as React from "react";
 import Walker from "../../elements/Walker";
+import MouseWalker from "../../elements/MouseWalker";
 import { CanvasProps, CanvasState } from './CanvasInterfaces';
 import CreatureInterface from "../../elements/CreatureInterface";
 
@@ -12,14 +13,15 @@ export default class Canvas extends React.Component<CanvasProps, CanvasState> {
             mouseX: 0,
             mouseY: 0,
             creatures: [
-                new Walker(this.props.width / 2, this.props.height / 2)
+                new Walker(this.props.width / 2, this.props.height / 2),
+                new MouseWalker(this.props.width / 2, this.props.height / 2)
             ]
         }
     }
 
     draw(): void {
         this.state.creatures.forEach((creature:CreatureInterface) => {
-            creature.step();
+            creature.step(this.state);
             creature.display(this.state);
         });
         window.requestAnimationFrame(() => this.draw());

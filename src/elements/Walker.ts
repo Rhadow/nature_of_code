@@ -13,7 +13,7 @@ export default class Walker implements CreatureInterface {
         this.lastY = y;
     }
 
-    step(): void {
+    step(state: Readonly<CanvasState>): void {
         this.lastX = this.x;
         this.lastY = this.y;
         this.x += Math.random() * 2.1 - 1;
