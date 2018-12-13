@@ -1,7 +1,7 @@
 import * as React from "react";
 import Walker from "../../elements/Walker";
 import { CanvasProps, CanvasState } from './CanvasInterfaces';
-
+import CreatureInterface from "../../elements/CreatureInterface";
 
 export default class Canvas extends React.Component<CanvasProps, CanvasState> {
     private canvasRef = React.createRef<HTMLCanvasElement>();
@@ -18,7 +18,7 @@ export default class Canvas extends React.Component<CanvasProps, CanvasState> {
     }
 
     draw(): void {
-        this.state.creatures.forEach(creature => {
+        this.state.creatures.forEach((creature:CreatureInterface) => {
             creature.step();
             creature.display(this.state);
         });
@@ -29,13 +29,13 @@ export default class Canvas extends React.Component<CanvasProps, CanvasState> {
         if (this.canvasRef.current) {
             const cavasRef = this.canvasRef.current;
             this.canvasRef.current.addEventListener('mousemove', (e) => {
-                this.setState((state) => ({
+                this.setState((state: CanvasState): CanvasState => ({
                     ...state,
                     mouseX: e.offsetX,
                     mouseY: e.offsetY
                 }));
             });
-            this.setState((state) => ({
+            this.setState((state: CanvasState): CanvasState => ({
                 ...state,
                 ctx: cavasRef.getContext('2d')
             }), () => {
