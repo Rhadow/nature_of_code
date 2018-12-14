@@ -1,14 +1,14 @@
-import CreatureInterface from "../../elements/CreatureInterface";
+import {ICreatureInterface} from "../../elements/ElementInterface";
 
-export interface CanvasProps {
+export interface ICanvasProps {
     width: number;
     height: number;
     currentPage: string;
 }
 
-export interface CanvasState {
+export interface ICanvasState {
     ctx: CanvasRenderingContext2D | null;
     mouseX: number;
     mouseY: number;
-    currentCreatures: CreatureInterface[];
+    currentCreatures: ICreatureInterface[];
 }

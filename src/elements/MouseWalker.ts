@@ -1,11 +1,11 @@
 import Walker from './Walker';
-import { CanvasState } from '../components/Canvas/CanvasInterfaces';
+import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
 export default class MouseWalker extends Walker {
     constructor(x: number, y: number) {
         super(x, y);
     }
 
-    step(state: Readonly<CanvasState>): void {
+    step(state: Readonly<ICanvasState>): void {
         this.lastX = this.x;
         this.lastY = this.y;
         const probDifference: number = 0.1;

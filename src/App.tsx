@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import './App.css';
 import Canvas from './components/Canvas/Canvas';
-import { CanvasProps } from './components/Canvas/CanvasInterfaces';
-import { width, height, pages, pageLabelMapping} from './constants/pages';
+import { ICanvasProps } from './components/Canvas/CanvasInterfaces';
+import { width, height, pages, pageLabelMapping, IPageLabelMapping} from './constants/pages';
 
 interface AppProps {}
 interface AppState {
@@ -13,19 +13,19 @@ class App extends Component<AppProps, AppState> {
     private width: number = width;
     private height: number = height;
     private pages: string[] = pages;
-    private pageLabelMapping: { [key: string]: string } = pageLabelMapping;
+    private pageLabelMapping: IPageLabelMapping = pageLabelMapping;
 
     constructor(props: AppProps) {
         super(props);
         this.state = {
-            currentPage: 'walker'
+            currentPage: 'mover'
         };
     };
 
     renderButtons(): JSX.Element[] {
-        return this.pages.map((page: string) => {
+        return this.pages.map((page: string, i:number) => {
             return (
-                <button onClick={() => {
+                <button key={`button${i}`} onClick={() => {
                     this.setState((oldState) => ({
                         ...oldState,
                         currentPage: page
@@ -39,7 +39,7 @@ class App extends Component<AppProps, AppState> {
 
     render() {
         const { currentPage } = this.state;
-        const canvasProps: CanvasProps = {
+        const IcanvasProps: ICanvasProps = {
             width: this.width,
             height: this.height,
             currentPage,
@@ -48,7 +48,7 @@ class App extends Component<AppProps, AppState> {
             <div className="App">
                 {this.renderButtons()}
                 <h3>Nature of Code</h3>
-                <Canvas {...canvasProps} />
+                <Canvas {...IcanvasProps} />
             </div>
         );
     }
