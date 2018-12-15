@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import './App.css';
 import Canvas from './components/Canvas/Canvas';
 import { ICanvasProps } from './components/Canvas/CanvasInterfaces';
-import { width, height, pages, pageLabelMapping, IPageLabelMapping} from './constants/pages';
+import { width, height, pages, pageLabelMapping, IPageLabelMapping, defaultPage } from './constants/pages';
 
 interface AppProps {}
 interface AppState {
@@ -18,7 +18,7 @@ class App extends Component<AppProps, AppState> {
     constructor(props: AppProps) {
         super(props);
         this.state = {
-            currentPage: 'mover'
+            currentPage: defaultPage
         };
     };
 

@@ -1,9 +1,9 @@
-import {ICreatureInterface} from './ElementInterface';
+import {ICreature} from './ElementInterface';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
 import { monteCarloRandom } from '../utils/math';
 import { perlin2, seed } from '../utils/noise';
 
-export default class Walker implements ICreatureInterface {
+export default class Walker implements ICreature {
     protected x: number;
     protected y: number;
     protected lastX: number;

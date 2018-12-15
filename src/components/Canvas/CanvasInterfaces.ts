@@ -1,4 +1,4 @@
-import {ICreatureInterface} from "../../elements/ElementInterface";
+import { ICreature, IEnvironment } from "../../elements/ElementInterface";
 
 export interface ICanvasProps {
     width: number;
@@ -10,5 +10,6 @@ export interface ICanvasState {
     ctx: CanvasRenderingContext2D | null;
     mouseX: number;
     mouseY: number;
-    currentCreatures: ICreatureInterface[];
+    currentCreatures: ICreature[];
+    currentEnvironment: IEnvironment[];
 }

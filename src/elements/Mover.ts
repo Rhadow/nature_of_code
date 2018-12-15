@@ -1,27 +1,33 @@
-import { IMover } from '../ElementInterface';
-import { ICanvasState } from '../../components/Canvas/CanvasInterfaces';
 import * as numjs from 'numjs';
+import { IMover, ILiquid } from './ElementInterface';
+import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
+import { magnitude, normalize } from '../utils/math';
 
 export default class Mover implements IMover {
     velocity: nj.NdArray;
     mass: number;
-    private location: nj.NdArray;
+    frictionCoefficient: number = 0.01;
+    location: nj.NdArray;
     private acceleration: nj.NdArray;
     private radius: number;
     private worldWidth: number;
     private worldHeight: number;
+    private mainColor: string = '#e2bf7d';
+    private subColor: string = '#c3924f';
 
-    constructor(mass: number, worldWidth: number, worldHeight: number, location?: nj.NdArray) {
+    constructor(mass: number, worldWidth: number, worldHeight: number, location?: nj.NdArray, mainColor?: string, subColor?: string) {
         this.mass = mass;
-        this.radius = mass * 10;
+        this.radius = mass * 2;
         this.location = location ? location : numjs.array([
-            Math.random() * worldWidth / 2 + this.radius,
-            Math.random() * worldHeight / 2 + this.radius
+            Math.random() * (worldWidth - this.radius * 2) + this.radius,
+            Math.random() * (worldHeight - this.radius * 2) + this.radius
         ]);
         this.velocity = numjs.array([0, 0]);
         this.acceleration = numjs.array([0, 0]);
         this.worldWidth = worldWidth;
         this.worldHeight = worldHeight;
+        this.mainColor = mainColor ? mainColor : this.mainColor;
+        this.subColor = subColor ? subColor : this.subColor;
     }
 
     applyForce(force: nj.NdArray) {
@@ -40,7 +46,13 @@ export default class Mover implements IMover {
         if (state.ctx) {
             state.ctx.beginPath();
             state.ctx.arc(this.location.get(0), this.location.get(1), this.radius, 0, 2 * Math.PI);
+            state.ctx.fillStyle = this.mainColor;
+            state.ctx.fill();
+            state.ctx.lineWidth = 3;
+            state.ctx.strokeStyle = this.subColor;
             state.ctx.stroke();
+            state.ctx.lineWidth = 1;
+            state.ctx.strokeStyle = '#000000';
         }
     }
 
@@ -71,5 +83,27 @@ export default class Mover implements IMover {
         }
         this.location = numjs.array([newX, newY]);
         this.velocity = numjs.array([newVX, newVY]);
+    }
+
+    drag(liquid: ILiquid): void {
+        const v = magnitude(this.velocity);
+        const dragMagnitude = 0.5 * v * v * liquid.dragCoeficcient;
+        if (v > 0) {
+            this.applyForce(normalize(this.velocity).multiply(-dragMagnitude));
+        }
+    }
+
+    isInside(liquid: ILiquid): boolean {
+        let result = false;
+        const x = this.location.get(0);
+        const y = this.location.get(1);
+        const left = liquid.x;
+        const right = liquid.x + liquid.width;
+        const top = liquid.y;
+        const bottom = liquid.y + liquid.height;
+        if (x >= left && x <= right && y >= top && y <= bottom) {
+            result = true;
+        }
+        return result;
     }
 }

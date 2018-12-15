@@ -1,3 +1,5 @@
+import * as numjs from 'numjs';
+
 export const monteCarloRandom = (): number => {
     while (true) {
         const r1: number = Math.random();
@@ -7,4 +9,12 @@ export const monteCarloRandom = (): number => {
             return r1;
         }
     }
+}
+
+export const magnitude = (v: nj.NdArray): number => {
+    return Math.sqrt(v.pow(2).sum());
+}
+
+export const normalize = (v: nj.NdArray): nj.NdArray => {
+    return v.divide(magnitude(v));
 }
