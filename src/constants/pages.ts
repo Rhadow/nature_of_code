@@ -1,12 +1,15 @@
 import * as numjs from 'numjs';
 import { magnitude, normalize } from '../utils/math';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
-import { ICreature, IEnvironment } from "../elements/ElementInterface";
+import { ICreature, IEnvironment, IPendulum } from "../elements/ElementInterface";
+import { width, height } from './world';
 import Walker from '../elements/Walker';
 import MouseWalker from '../elements/MouseWalker';
 import Mover from '../elements/Mover';
 import Liquid from '../elements/Liquid';
 import Attractor from '../elements/Attractor';
+import Rocket from '../elements/Rocket';
+import Pendulum from '../elements/Pendulum';
 
 const generateMovers = (): Mover[] => {
     const movers: Mover[] = [];
@@ -66,28 +69,14 @@ const moverForceFunction = (currentEnvironment: IEnvironment[], creatures: ICrea
 }
 
 const attractorForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    const attractors: Attractor[] = [];
-    const movers: Mover[] = [];
-    const initialPushForces: nj.NdArray[] = [
-        numjs.array([15, 0]),
-        numjs.array([-16, 0]),
-    ];
+    const movers: Mover[] = <Mover[]>creatures;
 
-    for (let i = 0; i < creatures.length; i++) {
-        if (creatures[i] instanceof Attractor) {
-            attractors.push(<Attractor>creatures[i]);
-        } else if (creatures[i] instanceof Mover) {
-            movers.push(<Mover>creatures[i]);
-        }
-    }
-
-    attractors.forEach((attractor: Attractor) => {
-        movers.forEach((mover: Mover, i: number) => {
-            const attractForce = attractor.attract(mover);
-            if (magnitude(mover.velocity) === 0) {
-                mover.applyForce(initialPushForces[i]);
+    movers.forEach((attractor: Mover, i: number) => {
+        movers.forEach((mover: Mover, j: number) => {
+            if (i !== j) {
+                const attractForce = attractor.attract(mover);
+                mover.applyForce(attractForce);
             }
-            mover.applyForce(attractForce);
         });
     });
 
@@ -100,57 +89,140 @@ const attractorForceFunction = (currentEnvironment: IEnvironment[], creatures: I
     });
 }
 
-export const defaultPage = 'attractor';
+const rocketForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
+    const thrustForce: number = 1;
+    currentEnvironment.forEach((environment: IEnvironment) => {
+        environment.display(canvasState);
+    });
+    creatures.forEach((creature: ICreature) => {
+        if (creature instanceof Rocket) {
+            // Apply friction
+            const frictionNormalForce = 1;
+            let friction = numjs.array([0, 0]);
+            if (magnitude(creature.velocity) !== 0) {
+                friction = normalize(creature.velocity);
+            }
+            creature.applyForce(friction.multiply(-creature.frictionCoefficient * frictionNormalForce));
+            switch (canvasState.pressedKey) {
+                case 'ArrowLeft':
+                    creature.angle -= 0.03;
+                    break;
+                case 'ArrowRight':
+                    creature.angle += 0.03;
+                    break;
+                case 'ArrowUp':
+                    creature.applyForce(numjs.array([thrustForce * Math.cos(creature.angle), thrustForce * Math.sin(creature.angle)]));
+                    break;
+                case 'ArrowDown':
+                    creature.applyForce(numjs.array([-thrustForce * Math.cos(creature.angle), -thrustForce * Math.sin(creature.angle)]));
+                    break;
+            }
+        }
+        creature.step(canvasState);
+        creature.display(canvasState);
+    });
+}
+
+const pendulumForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
+    currentEnvironment.forEach((environment: IEnvironment) => {
+        environment.display(canvasState);
+    });
+    const pendulumOne: Pendulum = <Pendulum>creatures[0];
+    const pendulumTwo: Pendulum = <Pendulum>creatures[1];
+
+    pendulumOne.step(canvasState);
+
+    const x = pendulumOne.location.get(0);
+    const y = pendulumOne.location.get(1);
+
+    pendulumTwo.location = numjs.array(
+        [
+            x + pendulumOne.armLength * Math.sin(pendulumOne.angle),
+            y + pendulumOne.armLength * Math.cos(pendulumOne.angle),
+        ]
+    );
+    pendulumTwo.step(canvasState);
+    pendulumOne.display(canvasState);
+    pendulumTwo.display(canvasState);
+}
+
+export const defaultPage = 'pendulum';
 
 export interface IPageLabelMapping {
     'walker': string;
     'mousewalker': string;
     'mover': string,
     'attractor': string,
+    'rocket': string,
+    'pendulum': string,
     [key: string]: string;
 }
 
-export const width: number = 960;
-export const height: number = 480;
 export const pages: string[] = [
     'walker',
     'mousewalker',
     'mover',
-    'attractor'
+    'attractor',
+    'rocket',
+    'pendulum'
 ];
 
-export const pageLabelMapping: IPageLabelMapping = {
-    'walker': 'Walker',
-    'mousewalker': 'Mouse Walker',
-    'mover': 'Mover',
-    'attractor': 'Attractor'
-};
+interface IExperiment {
+    label: string;
+    creatures: ICreature[];
+    environments: IEnvironment[];
+    forceFunction: (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => void;
+}
 
-export const pageCreatureMapping: { [key in keyof IPageLabelMapping]: ICreature[] } = {
-    'walker': [
-        new Walker(width / 2, height / 2),
-    ],
-    'mousewalker': [
-        new MouseWalker(width / 2, height / 2),
-    ],
-    'mover': generateMovers(),
-    'attractor':[
-        new Attractor(20, numjs.array([width / 2, height / 2])),
-        new Mover(5, width, height, numjs.array([width / 2, 150])),
-        new Mover(5, width, height, numjs.array([width / 2 + 20, 330]), '#6b93d6', '#298487')
-    ]
-};
-
-export const pageEnvironmentMapping: { [key in keyof IPageLabelMapping]: IEnvironment[] } = {
-    'walker': [],
-    'mousewalker': [],
-    'mover': [new Liquid(0, height / 1.5, width, height / 1.5, 1)],
-    'attractor': []
-};
-
-export const pageForceFunctionMapping: { [key in keyof IPageLabelMapping]: (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => void} = {
-    'walker': defaultForceFunction,
-    'mousewalker': defaultForceFunction,
-    'mover': moverForceFunction,
-    'attractor': attractorForceFunction
-};
+export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
+    'walker': {
+        'label': 'Walker',
+        'creatures': [
+            new Walker(width / 2, height / 2),
+        ],
+        'environments': [],
+        'forceFunction': defaultForceFunction
+    },
+    'mousewalker': {
+        'label': 'Mouse Walker',
+        'creatures': [
+            new MouseWalker(width / 2, height / 2),
+        ],
+        'environments': [],
+        'forceFunction': defaultForceFunction
+    },
+    'mover': {
+        'label': 'Mover',
+        'creatures': generateMovers(),
+        'environments': [new Liquid(0, height / 1.5, width, height / 1.5, 1)],
+        'forceFunction': moverForceFunction
+    },
+    'attractor': {
+        'label': 'Attractor',
+        'creatures': [
+            new Mover(50, width, height, numjs.array([width / 2, height / 2]), '#f9d71c', '#ffa716'),
+            new Mover(15, width, height, numjs.array([180, height / 2])),
+            new Mover(10, width, height, numjs.array([width - 250, 330]), '#6b93d6', '#298487'),
+            new Mover(12, width, height, numjs.array([width - 200, 120]), '#c1440e', '#e77d11')
+        ],
+        'environments': [],
+        'forceFunction': attractorForceFunction
+    },
+    'rocket': {
+        'label': 'Rocket',
+        'creatures': [
+            new Rocket(15, width, height, numjs.array([width / 2, height / 2]), '#c1440e', '#e77d11'),
+        ],
+        'environments': [],
+        'forceFunction': rocketForceFunction
+    },
+    'pendulum': {
+        'label': 'Pendulum',
+        'creatures': [
+            new Pendulum(numjs.array([width / 2, 20]), 125),
+            new Pendulum(numjs.array([width / 2, 20]), 125, Math.PI / 2),
+        ],
+        'environments': [],
+        'forceFunction': pendulumForceFunction
+    }
+}

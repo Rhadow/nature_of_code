@@ -2,13 +2,10 @@ import * as React from "react";
 import cloneDeep from 'lodash.clonedeep';
 import { ICanvasProps, ICanvasState } from './CanvasInterfaces';
 import { ICreature, IEnvironment } from "../../elements/ElementInterface";
-import { pageCreatureMapping, pageEnvironmentMapping, pageForceFunctionMapping } from '../../constants/pages';
+import { experiments } from '../../constants/pages';
 
 export default class Canvas extends React.Component<ICanvasProps, ICanvasState> {
     private canvasRef = React.createRef<HTMLCanvasElement>();
-    private pageCreatureMapping: { [key: string]: ICreature[] } = pageCreatureMapping;
-    private pageEnvironmentMapping: { [key: string]: IEnvironment[] } = pageEnvironmentMapping;
-    private pageForceFunctionMapping: { [key: string]: (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => void } = pageForceFunctionMapping;
     private nonRefreshPages:string[] = ['walker', 'mousewalker'];
 
     constructor(props: ICanvasProps) {
@@ -17,8 +14,9 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
             ctx: null,
             mouseX: 0,
             mouseY: 0,
-            currentCreatures: cloneDeep(this.pageCreatureMapping[this.props.currentPage]),
-            currentEnvironment: cloneDeep(this.pageEnvironmentMapping[this.props.currentPage]),
+            pressedKey: '',
+            currentCreatures: cloneDeep(experiments[this.props.currentPage].creatures),
+            currentEnvironment: cloneDeep(experiments[this.props.currentPage].environments),
         }
     }
 
@@ -27,7 +25,7 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
         if (!this.nonRefreshPages.includes(this.props.currentPage)) {
             ctx!.clearRect(0, 0, this.props.width, this.props.height);
         }
-        const applyForceFunction = this.pageForceFunctionMapping[this.props.currentPage];
+        const applyForceFunction = experiments[this.props.currentPage].forceFunction;
         applyForceFunction(currentEnvironment, currentCreatures, this.state);
         window.requestAnimationFrame(() => this.draw());
     }
@@ -37,8 +35,8 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
         if (nextProps.currentPage !== this.props.currentPage) {
             this.setState((oldState) => ({
                 ...oldState,
-                currentCreatures: cloneDeep(this.pageCreatureMapping[nextProps.currentPage]),
-                currentEnvironment: cloneDeep(this.pageEnvironmentMapping[nextProps.currentPage]),
+                currentCreatures: cloneDeep(experiments[nextProps.currentPage].creatures),
+                currentEnvironment: cloneDeep(experiments[nextProps.currentPage].environments),
             }), () => {
                 if (ctx) {
                     ctx.clearRect(0, 0, this.props.width, this.props.height);
@@ -55,6 +53,18 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
                     ...state,
                     mouseX: e.offsetX,
                     mouseY: e.offsetY
+                }));
+            });
+            document.addEventListener('keydown', (e) => {
+                this.setState((state: ICanvasState): ICanvasState => ({
+                    ...state,
+                    pressedKey: e.key
+                }));
+            });
+            document.addEventListener('keyup', (e) => {
+                this.setState((state: ICanvasState): ICanvasState => ({
+                    ...state,
+                    pressedKey: ''
                 }));
             });
             this.setState((state: ICanvasState): ICanvasState => ({

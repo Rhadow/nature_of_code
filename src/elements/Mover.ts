@@ -1,19 +1,23 @@
 import * as numjs from 'numjs';
 import { IMover, ILiquid } from './ElementInterface';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
-import { magnitude, normalize } from '../utils/math';
+import { magnitude, normalize, getCoordinateAfterRotation } from '../utils/math';
+import { G } from '../constants/world';
 
 export default class Mover implements IMover {
     velocity: nj.NdArray;
     mass: number;
     frictionCoefficient: number = 0.01;
     location: nj.NdArray;
-    private acceleration: nj.NdArray;
+    angle: number = 0;
     private radius: number;
-    private worldWidth: number;
-    private worldHeight: number;
-    private mainColor: string = '#e2bf7d';
-    private subColor: string = '#c3924f';
+    protected acceleration: nj.NdArray;
+    protected angleVelocity: number = 0;
+    protected angleAcceleration: number = 0;
+    protected worldWidth: number;
+    protected worldHeight: number;
+    protected mainColor: string = '#e2bf7d';
+    protected subColor: string = '#c3924f';
 
     constructor(mass: number, worldWidth: number, worldHeight: number, location?: nj.NdArray, mainColor?: string, subColor?: string) {
         this.mass = mass;
@@ -35,17 +39,22 @@ export default class Mover implements IMover {
         this.acceleration = this.acceleration.add(accelerationCausedByForce);
     }
 
-    step(): void {
+    step(state: ICanvasState): void {
         this.velocity = this.velocity.add(this.acceleration);
         this.location = this.location.add(this.velocity);
+        this.angle = Math.atan2(this.velocity.get(1), this.velocity.get(0));
         this.checkEdges();
         this.acceleration = this.acceleration.multiply(0);
     }
 
     display(state: ICanvasState): void {
+        const x = this.location.get(0);
+        const y = this.location.get(1);
+        const [newX, newY] = getCoordinateAfterRotation(x, y, this.angle);
         if (state.ctx) {
             state.ctx.beginPath();
-            state.ctx.arc(this.location.get(0), this.location.get(1), this.radius, 0, 2 * Math.PI);
+            state.ctx.rotate(this.angle);
+            state.ctx.arc(newX, newY, this.radius, 0, 2 * Math.PI);
             state.ctx.fillStyle = this.mainColor;
             state.ctx.fill();
             state.ctx.lineWidth = 3;
@@ -53,6 +62,7 @@ export default class Mover implements IMover {
             state.ctx.stroke();
             state.ctx.lineWidth = 1;
             state.ctx.strokeStyle = '#000000';
+            state.ctx.resetTransform();
         }
     }
 
@@ -105,5 +115,13 @@ export default class Mover implements IMover {
             result = true;
         }
         return result;
+    }
+
+    attract(mover: Mover): nj.NdArray {
+        const [minimumDistance, maximumDistance] = [5, 15];
+        let force = this.location.subtract(mover.location);
+        let r = Math.min(Math.max(minimumDistance, magnitude(force)), maximumDistance);
+        let strength = G * this.mass * mover.mass / (r * r);
+        return normalize(force).multiply(strength);
     }
 }

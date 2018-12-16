@@ -17,20 +17,27 @@ export interface ILiquid extends IEnvironment {
     dragCoeficcient: number;
 }
 
-export interface IItem {
-    mass: number;
+export interface IPlacable {
     location: nj.NdArray;
+}
+
+export interface IItem extends IPlacable {
+    mass: number;
 }
 
 export interface IAttractor extends ICreature, IItem {
     attract(mover: Mover): nj.NdArray
 }
 
-export interface IMover extends ICreature, IItem {
+export interface IMover extends IAttractor {
     velocity: nj.NdArray;
     frictionCoefficient: number;
     applyForce(force: nj.NdArray): void;
     checkEdges(): void;
     drag(liquid: ILiquid): void;
     isInside(liquid: ILiquid): boolean;
+}
+
+export interface IPendulum extends ICreature, IPlacable {
+    armLength: number
 }

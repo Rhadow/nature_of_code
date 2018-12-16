@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import './App.css';
 import Canvas from './components/Canvas/Canvas';
 import { ICanvasProps } from './components/Canvas/CanvasInterfaces';
-import { width, height, pages, pageLabelMapping, IPageLabelMapping, defaultPage } from './constants/pages';
+import { pages, experiments, defaultPage } from './constants/pages';
+import { width, height } from './constants/world';
 
 interface AppProps {}
 interface AppState {
@@ -13,7 +14,6 @@ class App extends Component<AppProps, AppState> {
     private width: number = width;
     private height: number = height;
     private pages: string[] = pages;
-    private pageLabelMapping: IPageLabelMapping = pageLabelMapping;
 
     constructor(props: AppProps) {
         super(props);
@@ -31,7 +31,7 @@ class App extends Component<AppProps, AppState> {
                         currentPage: page
                     }));
                 }}>
-                    {this.pageLabelMapping[page]}
+                    {experiments[page].label}
                 </button>
             );
         });

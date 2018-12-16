@@ -10,6 +10,7 @@ export interface ICanvasState {
     ctx: CanvasRenderingContext2D | null;
     mouseX: number;
     mouseY: number;
+    pressedKey: string;
     currentCreatures: ICreature[];
     currentEnvironment: IEnvironment[];
 }

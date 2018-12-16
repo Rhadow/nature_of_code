@@ -18,3 +18,10 @@ export const magnitude = (v: nj.NdArray): number => {
 export const normalize = (v: nj.NdArray): nj.NdArray => {
     return v.divide(magnitude(v));
 }
+
+export const getCoordinateAfterRotation = (x:number, y:number, angle: number): number[] => {
+    return [
+        Math.cos(angle) * x + Math.sin(angle) * y,
+        -Math.sin(angle) * x + Math.cos(angle) * y,
+    ];
+}

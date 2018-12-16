@@ -3,6 +3,7 @@ import { IAttractor } from './ElementInterface';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
 import { magnitude, normalize } from '../utils/math';
 import Mover from './Mover';
+import { G } from '../constants/world';
 
 export default class Attractor implements IAttractor {
     mass: number;
@@ -33,7 +34,6 @@ export default class Attractor implements IAttractor {
     }
 
     attract(mover: Mover): nj.NdArray {
-        const G = 0.4;
         const [minimumDistance, maximumDistance] = [5, 15];
         let force = this.location.subtract(mover.location);
         let r = Math.min(Math.max(minimumDistance, magnitude(force)), maximumDistance);
