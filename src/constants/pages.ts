@@ -10,6 +10,7 @@ import Liquid from '../elements/Liquid';
 import Attractor from '../elements/Attractor';
 import Rocket from '../elements/Rocket';
 import Pendulum from '../elements/Pendulum';
+import Spring from '../elements/Spring';
 
 const generateMovers = (): Mover[] => {
     const movers: Mover[] = [];
@@ -146,7 +147,23 @@ const pendulumForceFunction = (currentEnvironment: IEnvironment[], creatures: IC
     pendulumTwo.display(canvasState);
 }
 
-export const defaultPage = 'pendulum';
+const springForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
+    currentEnvironment.forEach((environment: IEnvironment) => {
+        environment.display(canvasState);
+    });
+    const gravity: numjs.NdArray = numjs.array([0, 1]);
+    const spring: Spring = <Spring>creatures[0];
+    const bob: Mover = <Mover>creatures[1];
+    const air: Liquid = <Liquid>currentEnvironment[0];
+    bob.applyForce(gravity);
+    spring.connect(bob);
+    bob.drag(air);
+    bob.step(canvasState);
+    spring.display(canvasState);
+    bob.display(canvasState);
+}
+
+export const defaultPage = 'spring';
 
 export interface IPageLabelMapping {
     'walker': string;
@@ -155,6 +172,7 @@ export interface IPageLabelMapping {
     'attractor': string,
     'rocket': string,
     'pendulum': string,
+    'spring': string,
     [key: string]: string;
 }
 
@@ -164,7 +182,8 @@ export const pages: string[] = [
     'mover',
     'attractor',
     'rocket',
-    'pendulum'
+    'pendulum',
+    'spring'
 ];
 
 interface IExperiment {
@@ -220,9 +239,20 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
         'label': 'Pendulum',
         'creatures': [
             new Pendulum(numjs.array([width / 2, 20]), 125),
-            new Pendulum(numjs.array([width / 2, 20]), 125, Math.PI / 2),
+            new Pendulum(numjs.array([width / 2, 20]), 125, Math.PI / 2)
         ],
         'environments': [],
         'forceFunction': pendulumForceFunction
+    },
+    'spring': {
+        'label': 'Spring',
+        'creatures': [
+            new Spring(numjs.array([width / 2, 20]), 125),
+            new Mover(15, width, height, numjs.array([width / 2 + 50, 60]))
+        ],
+        'environments': [
+            new Liquid(0, 0, width, height, 0.1, '#ffffff')
+        ],
+        'forceFunction': springForceFunction
     }
 }

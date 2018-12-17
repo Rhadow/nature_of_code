@@ -14,7 +14,7 @@ export default class Pendulum implements IPendulum {
     constructor(location: nj.NdArray, armLength: number, initialAngle?: number) {
         this.location = location;
         this.armLength = armLength;
-        this.angle = isNumber(initialAngle) ? initialAngle : this.angle;
+        this.angle = (isNumber(initialAngle) && !isNaN(initialAngle)) ? initialAngle : this.angle;
     }
 
     step(state: ICanvasState): void {

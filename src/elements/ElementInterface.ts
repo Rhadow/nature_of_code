@@ -39,5 +39,10 @@ export interface IMover extends IAttractor {
 }
 
 export interface IPendulum extends ICreature, IPlacable {
-    armLength: number
+    armLength: number;
+}
+
+export interface ISpring extends ICreature, IPlacable {
+    restArmLength: number;
+    connect(bob: Mover): void
 }
