@@ -11,6 +11,9 @@ import Attractor from '../elements/Attractor';
 import Rocket from '../elements/Rocket';
 import Pendulum from '../elements/Pendulum';
 import Spring from '../elements/Spring';
+import Particle from '../elements/Particle';
+import ParticleSystem from '../elements/ParticleSystems';
+import Repeller from '../elements/Repeller';
 
 const generateMovers = (): Mover[] => {
     const movers: Mover[] = [];
@@ -163,7 +166,20 @@ const springForceFunction = (currentEnvironment: IEnvironment[], creatures: ICre
     bob.display(canvasState);
 }
 
-export const defaultPage = 'spring';
+const particleForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
+    const gravity: nj.NdArray = numjs.array([0, 0.1]);
+    let particleSystem: ParticleSystem = <ParticleSystem>creatures[0];
+    let repeller: Repeller = <Repeller>currentEnvironment[0];
+    currentEnvironment.forEach((environment: IEnvironment) => {
+        environment.display(canvasState);
+    });
+    particleSystem.addParticle();
+    particleSystem.applyForceToParticles(gravity);
+    particleSystem.applyRepeller(repeller);
+    particleSystem.run(canvasState);
+}
+
+export const defaultPage = 'particle';
 
 export interface IPageLabelMapping {
     'walker': string;
@@ -173,6 +189,7 @@ export interface IPageLabelMapping {
     'rocket': string,
     'pendulum': string,
     'spring': string,
+    'particle': string,
     [key: string]: string;
 }
 
@@ -183,7 +200,8 @@ export const pages: string[] = [
     'attractor',
     'rocket',
     'pendulum',
-    'spring'
+    'spring',
+    'particle'
 ];
 
 interface IExperiment {
@@ -191,6 +209,7 @@ interface IExperiment {
     creatures: ICreature[];
     environments: IEnvironment[];
     forceFunction: (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => void;
+    initialForceFunction: (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => void;
 }
 
 export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
@@ -200,7 +219,8 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
             new Walker(width / 2, height / 2),
         ],
         'environments': [],
-        'forceFunction': defaultForceFunction
+        'forceFunction': defaultForceFunction,
+        'initialForceFunction': () => {}
     },
     'mousewalker': {
         'label': 'Mouse Walker',
@@ -208,13 +228,15 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
             new MouseWalker(width / 2, height / 2),
         ],
         'environments': [],
-        'forceFunction': defaultForceFunction
+        'forceFunction': defaultForceFunction,
+        'initialForceFunction': () => {}
     },
     'mover': {
         'label': 'Mover',
         'creatures': generateMovers(),
         'environments': [new Liquid(0, height / 1.5, width, height / 1.5, 1)],
-        'forceFunction': moverForceFunction
+        'forceFunction': moverForceFunction,
+        'initialForceFunction': () => { }
     },
     'attractor': {
         'label': 'Attractor',
@@ -225,7 +247,8 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
             new Mover(12, width, height, numjs.array([width - 200, 120]), '#c1440e', '#e77d11')
         ],
         'environments': [],
-        'forceFunction': attractorForceFunction
+        'forceFunction': attractorForceFunction,
+        'initialForceFunction': () => { }
     },
     'rocket': {
         'label': 'Rocket',
@@ -233,7 +256,8 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
             new Rocket(15, width, height, numjs.array([width / 2, height / 2]), '#c1440e', '#e77d11'),
         ],
         'environments': [],
-        'forceFunction': rocketForceFunction
+        'forceFunction': rocketForceFunction,
+        'initialForceFunction': () => { }
     },
     'pendulum': {
         'label': 'Pendulum',
@@ -242,7 +266,8 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
             new Pendulum(numjs.array([width / 2, 20]), 125, Math.PI / 2)
         ],
         'environments': [],
-        'forceFunction': pendulumForceFunction
+        'forceFunction': pendulumForceFunction,
+        'initialForceFunction': () => { }
     },
     'spring': {
         'label': 'Spring',
@@ -253,6 +278,14 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
         'environments': [
             new Liquid(0, 0, width, height, 0.1, '#ffffff')
         ],
-        'forceFunction': springForceFunction
+        'forceFunction': springForceFunction,
+        'initialForceFunction': () => { }
+    },
+    'particle': {
+        'label': 'Particle',
+        'creatures': [new ParticleSystem(numjs.array([width / 2, 80]))],
+        'environments': [new Repeller(20, numjs.array([width / 2 - 50, height / 3]))],
+        'forceFunction': particleForceFunction,
+        'initialForceFunction': () => {}
     }
 }

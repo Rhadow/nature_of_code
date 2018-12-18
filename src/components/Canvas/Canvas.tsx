@@ -15,19 +15,30 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
             mouseX: 0,
             mouseY: 0,
             pressedKey: '',
+            currentFrame: 0,
             currentCreatures: cloneDeep(experiments[this.props.currentPage].creatures),
             currentEnvironment: cloneDeep(experiments[this.props.currentPage].environments),
         }
     }
 
     draw(): void {
-        const { currentCreatures, ctx, currentEnvironment } = this.state;
+        const { currentCreatures, ctx, currentEnvironment, currentFrame } = this.state;
         if (!this.nonRefreshPages.includes(this.props.currentPage)) {
             ctx!.clearRect(0, 0, this.props.width, this.props.height);
         }
+        const initalForceFunction = experiments[this.props.currentPage].initialForceFunction;
         const applyForceFunction = experiments[this.props.currentPage].forceFunction;
+
+        if (currentFrame === 0) {
+            initalForceFunction(currentEnvironment, currentCreatures, this.state);
+        }
         applyForceFunction(currentEnvironment, currentCreatures, this.state);
-        window.requestAnimationFrame(() => this.draw());
+        this.setState((oldState) => ({
+            ...oldState,
+            currentFrame: oldState.currentFrame + 1
+        }), () => {
+            window.requestAnimationFrame(() => this.draw());
+        });
     }
 
     componentWillReceiveProps(nextProps: ICanvasProps): void {
@@ -35,6 +46,7 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
         if (nextProps.currentPage !== this.props.currentPage) {
             this.setState((oldState) => ({
                 ...oldState,
+                currentFrame: 0,
                 currentCreatures: cloneDeep(experiments[nextProps.currentPage].creatures),
                 currentEnvironment: cloneDeep(experiments[nextProps.currentPage].environments),
             }), () => {

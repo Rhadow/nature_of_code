@@ -8,6 +8,7 @@ export interface ICanvasProps {
 
 export interface ICanvasState {
     ctx: CanvasRenderingContext2D | null;
+    currentFrame: number;
     mouseX: number;
     mouseY: number;
     pressedKey: string;

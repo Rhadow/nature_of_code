@@ -10,7 +10,7 @@
     "@types/react": "16.7.14",
     "@types/react-dom": "16.0.11",
     "lodash.clonedeep": "^4.5.0",
-    "numjs": "^0.16.0",
+    "numjs": "0.16.0",
     "react": "^16.6.3",
     "react-dom": "^16.6.3",
     "react-scripts": "2.1.1",
