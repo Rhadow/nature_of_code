@@ -1,3 +1,5 @@
+type Vector = nj.NdArray;
+
 export const monteCarloRandom = (): number => {
     while (true) {
         const r1: number = Math.random();
@@ -9,15 +11,15 @@ export const monteCarloRandom = (): number => {
     }
 }
 
-export const magnitude = (v: nj.NdArray): number => {
+export const magnitude = (v: Vector): number => {
     return Math.sqrt(v.pow(2).sum());
 }
 
-export const normalize = (v: nj.NdArray): nj.NdArray => {
+export const normalize = (v: Vector): Vector => {
     return v.divide(magnitude(v));
 }
 
-export const limit = (v: nj.NdArray, maximum: number): nj.NdArray => {
+export const limit = (v: Vector, maximum: number): Vector => {
     const vMag = magnitude(v);
     if (vMag <= maximum) {
         return v;
@@ -36,3 +38,16 @@ export const mapping = (x: number, xMin: number, xMax: number, yMin: number, yMa
     const ratio = (x - xMin) / (xMax - xMin);
     return (yMax - yMin) * ratio + yMin;
 };
+
+export const angleBetween = (v1: Vector, v2: Vector): number => {
+    const dotProduct = v1.dot(v2);
+    return Math.acos(dotProduct.get(0) / (magnitude(v1) * magnitude(v2)))
+}
+
+export const findNormalPoint = (a: Vector, b: Vector, p: Vector):Vector => {
+    const ab: Vector = b.subtract(a);
+    const ap: Vector = p.subtract(a);
+    const theta = angleBetween(ab, ap);
+    const distance = normalize(ab).multiply(magnitude(ap) * Math.cos(theta));
+    return a.add(distance);
+}

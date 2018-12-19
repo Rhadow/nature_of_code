@@ -1,235 +1,13 @@
-import * as numjs from 'numjs';
-import { magnitude, normalize, mapping } from '../utils/math';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
-import { ICreature, IEnvironment, IPendulum } from "../elements/ElementInterface";
-import { width, height } from './world';
-import Walker from '../elements/Walker';
-import MouseWalker from '../elements/MouseWalker';
-import Mover from '../elements/Mover';
-import Liquid from '../elements/Liquid';
-import Attractor from '../elements/Attractor';
-import Rocket from '../elements/Rocket';
-import Pendulum from '../elements/Pendulum';
-import Spring from '../elements/Spring';
-import Particle from '../elements/Particle';
-import ParticleSystem from '../elements/ParticleSystems';
-import Repeller from '../elements/Repeller';
-import Vehicle from '../elements/Vehicle';
-import FlowField from '../elements/FlowField';
-import { perlin2, seed } from '../utils/noise';
+import { ICreature, IEnvironment } from "../elements/ElementInterface";
+import {rocketExperiment} from '../experiments/rocket';
+import {walkerExperiment, mouseWalkerExperiment} from '../experiments/walker';
+import {moverExperiment, attractorExperiment} from '../experiments/mover';
+import {pendulumExperiment, springExperiment} from '../experiments/pendulum';
+import {particleExperiment} from '../experiments/particle';
+import {vehicleExperiment, flowFieldExperiment, pathExperiment} from '../experiments/vehicle';
 
-const generateMovers = (): Mover[] => {
-    const movers: Mover[] = [];
-    const numOfMovers: number = 5;
-    const minMass = 5;
-    const maxMass = 10;
-    for (let i = 0; i < numOfMovers; i++) {
-        const moverMass = Math.random() * (maxMass - minMass) + minMass;
-        movers.push(
-            new Mover(moverMass, numjs.array([
-                Math.random() * (width - moverMass * 4) + moverMass * 2,
-                maxMass * 2
-            ]))
-        )
-    }
-    return movers;
-}
-
-const defaultForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    currentEnvironment.forEach((environment: IEnvironment) => {
-        environment.display(canvasState);
-    });
-    creatures.forEach((creature: ICreature) => {
-        creature.step(canvasState);
-        creature.display(canvasState);
-    });
-}
-
-const moverForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    const gravity: nj.NdArray = numjs.array([0, 0.2]);
-    const wind: nj.NdArray = numjs.array([0.001, 0]);
-    currentEnvironment.forEach((environment: IEnvironment) => {
-        environment.display(canvasState);
-    });
-    creatures.forEach((creature: ICreature) => {
-        if (creature instanceof Mover) {
-            // Apply friction
-            const frictionNormalForce = 1;
-            let friction = numjs.array([0, 0]);
-            if (magnitude(creature.velocity) !== 0) {
-                friction = normalize(creature.velocity);
-            }
-            creature.applyForce(friction.multiply(-creature.frictionCoefficient * frictionNormalForce));
-            // Apply drag force
-            currentEnvironment.forEach((environment: IEnvironment) => {
-                if (environment instanceof Liquid && creature.isInside(environment)) {
-                    creature.drag(environment);
-                }
-            });
-            // Apply other forces
-            creature.applyForce(gravity.multiply(creature.mass));
-            creature.applyForce(wind);
-        }
-        creature.step(canvasState);
-        creature.display(canvasState);
-    });
-}
-
-const attractorForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    const movers: Mover[] = <Mover[]>creatures;
-
-    movers.forEach((attractor: Mover, i: number) => {
-        movers.forEach((mover: Mover, j: number) => {
-            if (i !== j) {
-                const attractForce = attractor.attract(mover);
-                mover.applyForce(attractForce);
-            }
-        });
-    });
-
-    currentEnvironment.forEach((environment: IEnvironment) => {
-        environment.display(canvasState);
-    });
-    creatures.forEach((creature: ICreature) => {
-        creature.step(canvasState);
-        creature.display(canvasState);
-    });
-}
-
-const rocketForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    const thrustForce: number = 1;
-    currentEnvironment.forEach((environment: IEnvironment) => {
-        environment.display(canvasState);
-    });
-    creatures.forEach((creature: ICreature) => {
-        if (creature instanceof Rocket) {
-            // Apply friction
-            const frictionNormalForce = 1;
-            let friction = numjs.array([0, 0]);
-            if (magnitude(creature.velocity) !== 0) {
-                friction = normalize(creature.velocity);
-            }
-            creature.applyForce(friction.multiply(-creature.frictionCoefficient * frictionNormalForce));
-            switch (canvasState.pressedKey) {
-                case 'ArrowLeft':
-                    creature.angle -= 0.03;
-                    break;
-                case 'ArrowRight':
-                    creature.angle += 0.03;
-                    break;
-                case 'ArrowUp':
-                    creature.applyForce(numjs.array([thrustForce * Math.cos(creature.angle), thrustForce * Math.sin(creature.angle)]));
-                    break;
-                case 'ArrowDown':
-                    creature.applyForce(numjs.array([-thrustForce * Math.cos(creature.angle), -thrustForce * Math.sin(creature.angle)]));
-                    break;
-            }
-        }
-        creature.step(canvasState);
-        creature.display(canvasState);
-    });
-}
-
-const pendulumForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    currentEnvironment.forEach((environment: IEnvironment) => {
-        environment.display(canvasState);
-    });
-    const pendulumOne: Pendulum = <Pendulum>creatures[0];
-    const pendulumTwo: Pendulum = <Pendulum>creatures[1];
-
-    pendulumOne.step(canvasState);
-
-    const x = pendulumOne.location.get(0);
-    const y = pendulumOne.location.get(1);
-
-    pendulumTwo.location = numjs.array(
-        [
-            x + pendulumOne.armLength * Math.sin(pendulumOne.angle),
-            y + pendulumOne.armLength * Math.cos(pendulumOne.angle),
-        ]
-    );
-    pendulumTwo.step(canvasState);
-    pendulumOne.display(canvasState);
-    pendulumTwo.display(canvasState);
-}
-
-const springForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    currentEnvironment.forEach((environment: IEnvironment) => {
-        environment.display(canvasState);
-    });
-    const gravity: numjs.NdArray = numjs.array([0, 1]);
-    const spring: Spring = <Spring>creatures[0];
-    const bob: Mover = <Mover>creatures[1];
-    const air: Liquid = <Liquid>currentEnvironment[0];
-    bob.applyForce(gravity);
-    spring.connect(bob);
-    bob.drag(air);
-    bob.step(canvasState);
-    spring.display(canvasState);
-    bob.display(canvasState);
-}
-
-const particleForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    const gravity: nj.NdArray = numjs.array([0, 0.1]);
-    let particleSystem: ParticleSystem = <ParticleSystem>creatures[0];
-    let repeller: Repeller = <Repeller>currentEnvironment[0];
-    currentEnvironment.forEach((environment: IEnvironment) => {
-        environment.display(canvasState);
-    });
-    particleSystem.addParticle();
-    particleSystem.applyForceToParticles(gravity);
-    particleSystem.applyRepeller(repeller);
-    particleSystem.run(canvasState);
-}
-
-const vehicleForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    currentEnvironment.forEach((environment: IEnvironment) => {
-        environment.display(canvasState);
-    });
-    const seeker: Vehicle = <Vehicle>creatures[0];
-    const wanderer: Vehicle = <Vehicle>creatures[1];
-    seeker.seek(numjs.array([canvasState.mouseX, canvasState.mouseY]));
-    wanderer.wander();
-    (<Vehicle[]>creatures).forEach((vehicle: Vehicle) => {
-        vehicle.run(canvasState);
-    });
-}
-
-const flowFieldForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
-    currentEnvironment.forEach((environment: IEnvironment) => {
-        environment.display(canvasState);
-    });
-    const flowField: FlowField = <FlowField>currentEnvironment[0];
-    (<Vehicle[]>creatures).forEach((vehicle: Vehicle) => {
-        vehicle.follow(flowField);
-        vehicle.run(canvasState);
-    });
-}
-
-const generateFlowFields = (width: number, height: number, resolution: number): nj.NdArray[][] => {
-    const result: nj.NdArray[][] = [];
-    const rows = Math.floor(width / resolution);
-    const cols = Math.floor(height / resolution);
-    seed(10);
-    let xOffset = 0;
-    for (let i = 0; i < rows; i++) {
-        result[i] = [];
-        let yOffset = 0;
-        for (let j = 0; j < cols; j++) {
-            const theta = mapping(perlin2(xOffset, yOffset), 0, 1, 0, Math.PI * 2);
-            const newField = numjs.array([
-                Math.cos(theta),
-                Math.sin(theta)
-            ])
-            result[i].push(newField);
-            yOffset += 0.04;
-        }
-        xOffset += 0.03;
-    }
-    return result;
-}
-
-export const defaultPage = 'flowField';
+export const defaultPage = 'path';
 
 export interface IPageLabelMapping {
     'walker': string;
@@ -242,6 +20,7 @@ export interface IPageLabelMapping {
     'particle': string,
     'vehicle': string,
     'flowField': string,
+    'path': string,
     [key: string]: string;
 }
 
@@ -255,7 +34,8 @@ export const pages: string[] = [
     'spring',
     'particle',
     'vehicle',
-    'flowField'
+    'flowField',
+    'path'
 ];
 
 interface IExperiment {
@@ -267,101 +47,15 @@ interface IExperiment {
 }
 
 export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
-    'walker': {
-        'label': 'Walker',
-        'creatures': [
-            new Walker(width / 2, height / 2),
-        ],
-        'environments': [],
-        'forceFunction': defaultForceFunction,
-        'initialForceFunction': () => {}
-    },
-    'mousewalker': {
-        'label': 'Mouse Walker',
-        'creatures': [
-            new MouseWalker(width / 2, height / 2),
-        ],
-        'environments': [],
-        'forceFunction': defaultForceFunction,
-        'initialForceFunction': () => {}
-    },
-    'mover': {
-        'label': 'Mover',
-        'creatures': generateMovers(),
-        'environments': [new Liquid(0, height / 1.5, width, height / 1.5, 1)],
-        'forceFunction': moverForceFunction,
-        'initialForceFunction': () => { }
-    },
-    'attractor': {
-        'label': 'Attractor',
-        'creatures': [
-            new Mover(50, numjs.array([width / 2, height / 2]), '#f9d71c', '#ffa716'),
-            new Mover(15, numjs.array([180, height / 2])),
-            new Mover(10, numjs.array([width - 250, 330]), '#6b93d6', '#298487'),
-            new Mover(12, numjs.array([width - 200, 120]), '#c1440e', '#e77d11')
-        ],
-        'environments': [],
-        'forceFunction': attractorForceFunction,
-        'initialForceFunction': () => { }
-    },
-    'rocket': {
-        'label': 'Rocket',
-        'creatures': [
-            new Rocket(15, numjs.array([width / 2, height / 2]), '#c1440e', '#e77d11'),
-        ],
-        'environments': [],
-        'forceFunction': rocketForceFunction,
-        'initialForceFunction': () => { }
-    },
-    'pendulum': {
-        'label': 'Pendulum',
-        'creatures': [
-            new Pendulum(numjs.array([width / 2, 20]), 125),
-            new Pendulum(numjs.array([width / 2, 20]), 125, Math.PI / 2)
-        ],
-        'environments': [],
-        'forceFunction': pendulumForceFunction,
-        'initialForceFunction': () => { }
-    },
-    'spring': {
-        'label': 'Spring',
-        'creatures': [
-            new Spring(numjs.array([width / 2, 20]), 125),
-            new Mover(15, numjs.array([width / 2 + 50, 60]))
-        ],
-        'environments': [
-            new Liquid(0, 0, width, height, 0.1, '#ffffff')
-        ],
-        'forceFunction': springForceFunction,
-        'initialForceFunction': () => { }
-    },
-    'particle': {
-        'label': 'Particle',
-        'creatures': [new ParticleSystem(numjs.array([width / 2, 80]))],
-        'environments': [new Repeller(20, numjs.array([width / 2 - 50, height / 3]))],
-        'forceFunction': particleForceFunction,
-        'initialForceFunction': () => {}
-    },
-    'vehicle': {
-        'label': 'Vehicle',
-        'creatures': [
-            new Vehicle(20, numjs.array([80, height / 2]), 4, 0.1),
-            new Vehicle(20, numjs.array([width / 2, height / 2]), 4, 0.2, '#7f80a7', '#4c4b67', true)
-        ],
-        'environments': [],
-        'forceFunction': vehicleForceFunction,
-        'initialForceFunction': () => {}
-    },
-    'flowField': {
-        'label': 'FlowField',
-        'creatures': [
-            new Vehicle(20, numjs.array([width/2, 10]), 6, 0.2, '#f9d71c', '#8b8b8b'),
-            new Vehicle(20, numjs.array([10, 10]), 4, 0.4, '#b60505', '#6b0202')
-        ],
-        'environments': [
-            new FlowField(width, height, 25, generateFlowFields, true)
-        ],
-        'forceFunction': flowFieldForceFunction,
-        'initialForceFunction': () => { }
-    },
+    'walker': walkerExperiment,
+    'mousewalker': mouseWalkerExperiment,
+    'mover': moverExperiment,
+    'attractor': attractorExperiment,
+    'rocket': rocketExperiment,
+    'pendulum': pendulumExperiment,
+    'spring': springExperiment,
+    'particle': particleExperiment,
+    'vehicle': vehicleExperiment,
+    'flowField': flowFieldExperiment,
+    'path': pathExperiment,
 }

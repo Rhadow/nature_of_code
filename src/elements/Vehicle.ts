@@ -1,8 +1,9 @@
 import * as numjs from 'numjs';
 import { IVehicle } from './ElementInterface';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
-import { magnitude, normalize, getCoordinateAfterRotation, limit, mapping } from '../utils/math';
+import { magnitude, normalize, getCoordinateAfterRotation, limit, mapping, findNormalPoint } from '../utils/math';
 import FlowField from './FlowField';
+import Path from './Path';
 
 export default class Vehicle implements IVehicle {
     mass: number;
@@ -11,19 +12,21 @@ export default class Vehicle implements IVehicle {
     velocity: nj.NdArray = numjs.array([0, 0]);
     maxVelocity: number;
     maxSteeringForce: number;
-    showWanderingPath: boolean = false;
+    isDebugging: boolean = false;
     private angle: number = -Math.PI / 4;
     private targetDistanceThreshold: number = 0;
     private predictDistance: number = 0;
     private predictRadius: number = 0;
     private nextWanderLocation: nj.NdArray = numjs.array([0, 0]);
     private futurePosition: nj.NdArray = numjs.array([0, 0]);
+    private normalPointOnPath: nj.NdArray = numjs.array([0, 0]);
     private isWandering: boolean = false;
+    private isFollowingPath: boolean = false;
     protected acceleration: nj.NdArray = numjs.array([0, 0]);
     protected mainColor: string = '#ffcf00';
     protected subColor: string = '#0f0b19';
 
-    constructor(mass: number, location: nj.NdArray, maxVelocity: number, maxSteeringForce: number, mainColor?: string, subColor?: string, showWanderingPath?: boolean) {
+    constructor(mass: number, location: nj.NdArray, maxVelocity: number, maxSteeringForce: number, mainColor?: string, subColor?: string, isDebugging?: boolean) {
         this.mass = mass;
         this.size = mass;
         this.predictDistance = mass * 6;
@@ -34,7 +37,7 @@ export default class Vehicle implements IVehicle {
         this.location = location;
         this.mainColor = mainColor ? mainColor : this.mainColor;
         this.subColor = subColor ? subColor : this.subColor;
-        this.showWanderingPath = showWanderingPath || this.showWanderingPath;
+        this.isDebugging = isDebugging || this.isDebugging;
     }
 
     applyForce(force: nj.NdArray) {
@@ -45,6 +48,7 @@ export default class Vehicle implements IVehicle {
         this.step(state);
         this.display(state);
         this.isWandering = false;
+        this.isFollowingPath = false;
     }
 
     step(state: ICanvasState): void {
@@ -77,20 +81,34 @@ export default class Vehicle implements IVehicle {
             state.ctx.lineWidth = 1;
             state.ctx.strokeStyle = '#000000';
             state.ctx.fillStyle = '#ffffff';
-            if (this.isWandering && this.showWanderingPath) {
-                const [futureX, futureY] = getCoordinateAfterRotation(this.futurePosition.get(0), this.futurePosition.get(1), this.angle);
-                const [wanderX, wanderY] = getCoordinateAfterRotation(this.nextWanderLocation.get(0), this.nextWanderLocation.get(1), this.angle);
-                state.ctx.beginPath();
-                state.ctx.moveTo(newX + this.size / 2, newY);
-                state.ctx.lineTo(futureX, futureY);
-                state.ctx.stroke();
-                state.ctx.beginPath();
-                state.ctx.arc(futureX, futureY, this.predictRadius, 0, Math.PI * 2);
-                state.ctx.stroke();
-                state.ctx.beginPath();
-                state.ctx.moveTo(futureX, futureY);
-                state.ctx.lineTo(wanderX, wanderY);
-                state.ctx.stroke();
+            if (this.isDebugging) {
+                if (this.isWandering) {
+                    const [futureX, futureY] = getCoordinateAfterRotation(this.futurePosition.get(0), this.futurePosition.get(1), this.angle);
+                    const [wanderX, wanderY] = getCoordinateAfterRotation(this.nextWanderLocation.get(0), this.nextWanderLocation.get(1), this.angle);
+                    state.ctx.beginPath();
+                    state.ctx.moveTo(newX + this.size / 2, newY);
+                    state.ctx.lineTo(futureX, futureY);
+                    state.ctx.stroke();
+                    state.ctx.beginPath();
+                    state.ctx.arc(futureX, futureY, this.predictRadius, 0, Math.PI * 2);
+                    state.ctx.stroke();
+                    state.ctx.beginPath();
+                    state.ctx.moveTo(futureX, futureY);
+                    state.ctx.lineTo(wanderX, wanderY);
+                    state.ctx.stroke();
+                }
+                if (this.isFollowingPath) {
+                    const [futureX, futureY] = getCoordinateAfterRotation(this.futurePosition.get(0), this.futurePosition.get(1), this.angle);
+                    const [normalX, normalY] = getCoordinateAfterRotation(this.normalPointOnPath.get(0), this.normalPointOnPath.get(1), this.angle);
+                    state.ctx.beginPath();
+                    state.ctx.moveTo(newX + this.size / 2, newY);
+                    state.ctx.lineTo(futureX, futureY);
+                    state.ctx.stroke();
+                    state.ctx.beginPath();
+                    state.ctx.moveTo(futureX, futureY);
+                    state.ctx.lineTo(normalX, normalY);
+                    state.ctx.stroke();
+                }
             }
             state.ctx.resetTransform();
         }
@@ -109,7 +127,7 @@ export default class Vehicle implements IVehicle {
         this.applyForce(steeringForce);
     }
 
-    wander() {
+    wander(): void {
         const futureX = this.location.get(0) + this.predictDistance * Math.cos(this.angle);
         const futureY = this.location.get(1) + this.predictDistance * Math.sin(this.angle);
         this.futurePosition = numjs.array([futureX, futureY]);
@@ -121,12 +139,27 @@ export default class Vehicle implements IVehicle {
         this.isWandering = true;
     }
 
-    follow(flowField: FlowField) {
+    follow(flowField: FlowField): void {
         const force = flowField.getField(this.location);
         const desiredVelocity = normalize(force).multiply(this.maxVelocity);
         const steer = desiredVelocity.subtract(this.velocity);
         const steeringForce = limit(steer, this.maxSteeringForce);
         this.applyForce(steeringForce);
+    }
+
+    followPath(path: Path): void {
+        this.isFollowingPath = true;
+        const predictDistance = this.mass * 2;
+        const futureX = this.location.get(0) + predictDistance * Math.cos(this.angle);
+        const futureY = this.location.get(1) + predictDistance * Math.sin(this.angle);
+        this.futurePosition = numjs.array([futureX, futureY]);
+        this.normalPointOnPath = findNormalPoint(path.start, path.end, this.futurePosition);
+        const targetDistanceFromNormal = 15;
+        const distance = magnitude(this.normalPointOnPath.subtract(this.location));
+        const target = normalize(path.end.subtract(path.start)).multiply(targetDistanceFromNormal).add(this.normalPointOnPath);
+        if (distance > path.radius) {
+            this.seek(target);
+        }
     }
 
     checkEdges(worldWidth: number, worldHeight: number): void {

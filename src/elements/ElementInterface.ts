@@ -83,3 +83,7 @@ export interface IVehicle extends ICreature, IMovable, IItem, IEdgeChecker {
 export interface IFlowField extends IEnvironment {
     getField(location: nj.NdArray): nj.NdArray
 }
+
+export interface IPath extends IEnvironment {
+    radius: number;
+}

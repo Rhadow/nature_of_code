@@ -1,7 +1,6 @@
-import * as numjs from 'numjs';
 import { IFlowField } from './ElementInterface';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
-import { magnitude, normalize, getCoordinateAfterRotation, limit, mapping } from '../utils/math';
+import { getCoordinateAfterRotation } from '../utils/math';
 
 export default class FlowField implements IFlowField {
     private fields: nj.NdArray[][] = [[]];
