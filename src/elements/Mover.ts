@@ -14,22 +14,15 @@ export default class Mover implements IMover {
     protected acceleration: nj.NdArray;
     protected angleVelocity: number = 0;
     protected angleAcceleration: number = 0;
-    protected worldWidth: number;
-    protected worldHeight: number;
     protected mainColor: string = '#e2bf7d';
     protected subColor: string = '#c3924f';
 
-    constructor(mass: number, worldWidth: number, worldHeight: number, location?: nj.NdArray, mainColor?: string, subColor?: string) {
+    constructor(mass: number, location: nj.NdArray, mainColor?: string, subColor?: string) {
         this.mass = mass;
         this.radius = mass * 2;
-        this.location = location ? location : numjs.array([
-            Math.random() * (worldWidth - this.radius * 2) + this.radius,
-            Math.random() * (worldHeight - this.radius * 2) + this.radius
-        ]);
+        this.location = location
         this.velocity = numjs.array([0, 0]);
         this.acceleration = numjs.array([0, 0]);
-        this.worldWidth = worldWidth;
-        this.worldHeight = worldHeight;
         this.mainColor = mainColor ? mainColor : this.mainColor;
         this.subColor = subColor ? subColor : this.subColor;
     }
@@ -43,7 +36,7 @@ export default class Mover implements IMover {
         this.velocity = this.velocity.add(this.acceleration);
         this.location = this.location.add(this.velocity);
         this.angle = Math.atan2(this.velocity.get(1), this.velocity.get(0));
-        this.checkEdges();
+        this.checkEdges(state.worldWidth, state.worldHeight);
         this.acceleration = this.acceleration.multiply(0);
     }
 
@@ -66,7 +59,7 @@ export default class Mover implements IMover {
         }
     }
 
-    checkEdges(): void {
+    checkEdges(worldWidth: number, worldHeight: number): void {
         const x = this.location.get(0);
         const y = this.location.get(1);
         const vx = this.velocity.get(0);
@@ -75,16 +68,16 @@ export default class Mover implements IMover {
         let newY: number = y;
         let newVX: number = vx;
         let newVY: number = vy;
-        if (x > (this.worldWidth - this.radius)) {
-            newX = this.worldWidth - this.radius;
+        if (x > (worldWidth - this.radius)) {
+            newX = worldWidth - this.radius;
             newVX = -vx;
         }
         if (x < (this.radius)) {
             newX = this.radius;
             newVX = -vx;
         }
-        if (y > (this.worldHeight - this.radius)) {
-            newY = this.worldHeight - this.radius;
+        if (y > (worldHeight - this.radius)) {
+            newY = worldHeight - this.radius;
             newVY = -vy;
         }
         if (y < (this.radius)) {

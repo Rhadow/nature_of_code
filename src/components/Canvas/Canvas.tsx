@@ -1,7 +1,6 @@
 import * as React from "react";
 import cloneDeep from 'lodash.clonedeep';
 import { ICanvasProps, ICanvasState } from './CanvasInterfaces';
-import { ICreature, IEnvironment } from "../../elements/ElementInterface";
 import { experiments } from '../../constants/pages';
 
 export default class Canvas extends React.Component<ICanvasProps, ICanvasState> {
@@ -16,6 +15,8 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
             mouseY: 0,
             pressedKey: '',
             currentFrame: 0,
+            worldWidth: this.props.width,
+            worldHeight: this.props.height,
             currentCreatures: cloneDeep(experiments[this.props.currentPage].creatures),
             currentEnvironment: cloneDeep(experiments[this.props.currentPage].environments),
         }

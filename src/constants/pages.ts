@@ -1,5 +1,5 @@
 import * as numjs from 'numjs';
-import { magnitude, normalize } from '../utils/math';
+import { magnitude, normalize, mapping } from '../utils/math';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
 import { ICreature, IEnvironment, IPendulum } from "../elements/ElementInterface";
 import { width, height } from './world';
@@ -14,6 +14,9 @@ import Spring from '../elements/Spring';
 import Particle from '../elements/Particle';
 import ParticleSystem from '../elements/ParticleSystems';
 import Repeller from '../elements/Repeller';
+import Vehicle from '../elements/Vehicle';
+import FlowField from '../elements/FlowField';
+import { perlin2, seed } from '../utils/noise';
 
 const generateMovers = (): Mover[] => {
     const movers: Mover[] = [];
@@ -23,7 +26,7 @@ const generateMovers = (): Mover[] => {
     for (let i = 0; i < numOfMovers; i++) {
         const moverMass = Math.random() * (maxMass - minMass) + minMass;
         movers.push(
-            new Mover(moverMass, width, height, numjs.array([
+            new Mover(moverMass, numjs.array([
                 Math.random() * (width - moverMass * 4) + moverMass * 2,
                 maxMass * 2
             ]))
@@ -179,7 +182,54 @@ const particleForceFunction = (currentEnvironment: IEnvironment[], creatures: IC
     particleSystem.run(canvasState);
 }
 
-export const defaultPage = 'particle';
+const vehicleForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
+    currentEnvironment.forEach((environment: IEnvironment) => {
+        environment.display(canvasState);
+    });
+    const seeker: Vehicle = <Vehicle>creatures[0];
+    const wanderer: Vehicle = <Vehicle>creatures[1];
+    seeker.seek(numjs.array([canvasState.mouseX, canvasState.mouseY]));
+    wanderer.wander();
+    (<Vehicle[]>creatures).forEach((vehicle: Vehicle) => {
+        vehicle.run(canvasState);
+    });
+}
+
+const flowFieldForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
+    currentEnvironment.forEach((environment: IEnvironment) => {
+        environment.display(canvasState);
+    });
+    const flowField: FlowField = <FlowField>currentEnvironment[0];
+    (<Vehicle[]>creatures).forEach((vehicle: Vehicle) => {
+        vehicle.follow(flowField);
+        vehicle.run(canvasState);
+    });
+}
+
+const generateFlowFields = (width: number, height: number, resolution: number): nj.NdArray[][] => {
+    const result: nj.NdArray[][] = [];
+    const rows = Math.floor(width / resolution);
+    const cols = Math.floor(height / resolution);
+    seed(10);
+    let xOffset = 0;
+    for (let i = 0; i < rows; i++) {
+        result[i] = [];
+        let yOffset = 0;
+        for (let j = 0; j < cols; j++) {
+            const theta = mapping(perlin2(xOffset, yOffset), 0, 1, 0, Math.PI * 2);
+            const newField = numjs.array([
+                Math.cos(theta),
+                Math.sin(theta)
+            ])
+            result[i].push(newField);
+            yOffset += 0.04;
+        }
+        xOffset += 0.03;
+    }
+    return result;
+}
+
+export const defaultPage = 'flowField';
 
 export interface IPageLabelMapping {
     'walker': string;
@@ -190,6 +240,8 @@ export interface IPageLabelMapping {
     'pendulum': string,
     'spring': string,
     'particle': string,
+    'vehicle': string,
+    'flowField': string,
     [key: string]: string;
 }
 
@@ -201,7 +253,9 @@ export const pages: string[] = [
     'rocket',
     'pendulum',
     'spring',
-    'particle'
+    'particle',
+    'vehicle',
+    'flowField'
 ];
 
 interface IExperiment {
@@ -241,10 +295,10 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
     'attractor': {
         'label': 'Attractor',
         'creatures': [
-            new Mover(50, width, height, numjs.array([width / 2, height / 2]), '#f9d71c', '#ffa716'),
-            new Mover(15, width, height, numjs.array([180, height / 2])),
-            new Mover(10, width, height, numjs.array([width - 250, 330]), '#6b93d6', '#298487'),
-            new Mover(12, width, height, numjs.array([width - 200, 120]), '#c1440e', '#e77d11')
+            new Mover(50, numjs.array([width / 2, height / 2]), '#f9d71c', '#ffa716'),
+            new Mover(15, numjs.array([180, height / 2])),
+            new Mover(10, numjs.array([width - 250, 330]), '#6b93d6', '#298487'),
+            new Mover(12, numjs.array([width - 200, 120]), '#c1440e', '#e77d11')
         ],
         'environments': [],
         'forceFunction': attractorForceFunction,
@@ -253,7 +307,7 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
     'rocket': {
         'label': 'Rocket',
         'creatures': [
-            new Rocket(15, width, height, numjs.array([width / 2, height / 2]), '#c1440e', '#e77d11'),
+            new Rocket(15, numjs.array([width / 2, height / 2]), '#c1440e', '#e77d11'),
         ],
         'environments': [],
         'forceFunction': rocketForceFunction,
@@ -273,7 +327,7 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
         'label': 'Spring',
         'creatures': [
             new Spring(numjs.array([width / 2, 20]), 125),
-            new Mover(15, width, height, numjs.array([width / 2 + 50, 60]))
+            new Mover(15, numjs.array([width / 2 + 50, 60]))
         ],
         'environments': [
             new Liquid(0, 0, width, height, 0.1, '#ffffff')
@@ -287,5 +341,27 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
         'environments': [new Repeller(20, numjs.array([width / 2 - 50, height / 3]))],
         'forceFunction': particleForceFunction,
         'initialForceFunction': () => {}
-    }
+    },
+    'vehicle': {
+        'label': 'Vehicle',
+        'creatures': [
+            new Vehicle(20, numjs.array([80, height / 2]), 4, 0.1),
+            new Vehicle(20, numjs.array([width / 2, height / 2]), 4, 0.2, '#7f80a7', '#4c4b67', true)
+        ],
+        'environments': [],
+        'forceFunction': vehicleForceFunction,
+        'initialForceFunction': () => {}
+    },
+    'flowField': {
+        'label': 'FlowField',
+        'creatures': [
+            new Vehicle(20, numjs.array([width/2, 10]), 6, 0.2, '#f9d71c', '#8b8b8b'),
+            new Vehicle(20, numjs.array([10, 10]), 4, 0.4, '#b60505', '#6b0202')
+        ],
+        'environments': [
+            new FlowField(width, height, 25, generateFlowFields, true)
+        ],
+        'forceFunction': flowFieldForceFunction,
+        'initialForceFunction': () => { }
+    },
 }

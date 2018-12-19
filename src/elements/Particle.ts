@@ -1,7 +1,6 @@
 import * as numjs from 'numjs';
 import { IParticle } from './ElementInterface';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
-import { magnitude, normalize, getCoordinateAfterRotation } from '../utils/math';
 import { isNumber } from 'util';
 
 export default class Particle implements IParticle {

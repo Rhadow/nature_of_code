@@ -12,6 +12,8 @@ export interface ICanvasState {
     mouseX: number;
     mouseY: number;
     pressedKey: string;
+    worldWidth: number;
+    worldHeight: number;
     currentCreatures: ICreature[];
     currentEnvironment: IEnvironment[];
 }

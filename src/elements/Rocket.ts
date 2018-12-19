@@ -6,8 +6,8 @@ import Mover from './Mover';
 
 export default class Rocket extends Mover implements IMover {
     private size: number;
-    constructor(mass: number, worldWidth: number, worldHeight: number, location?: nj.NdArray, mainColor?: string, subColor?: string) {
-        super(mass, worldWidth, worldHeight, location, mainColor, subColor);
+    constructor(mass: number, location: nj.NdArray, mainColor?: string, subColor?: string) {
+        super(mass, location, mainColor, subColor);
         this.size = this.mass * 2;
         this.frictionCoefficient = 0.1;
     }
@@ -15,7 +15,7 @@ export default class Rocket extends Mover implements IMover {
     step(state: ICanvasState): void {
         this.velocity = this.velocity.add(this.acceleration);
         this.location = this.location.add(this.velocity);
-        this.checkEdges();
+        this.checkEdges(state.worldWidth, state.worldHeight);
         this.acceleration = this.acceleration.multiply(0);
     }
 
@@ -47,22 +47,22 @@ export default class Rocket extends Mover implements IMover {
         }
     }
 
-    checkEdges(): void {
+    checkEdges(worldWidth: number, worldHeight: number): void {
         const x = this.location.get(0);
         const y = this.location.get(1);
         let newX: number = x;
         let newY: number = y;
-        if (x > this.worldWidth) {
+        if (x > worldWidth) {
             newX = 0;
         }
         if (x < 0) {
-            newX = this.worldWidth;
+            newX = worldWidth;
         }
-        if (y > this.worldHeight) {
+        if (y > worldHeight) {
             newY = 0;
         }
         if (y < 0) {
-            newY = this.worldHeight;
+            newY = worldHeight;
         }
         this.location = numjs.array([newX, newY]);
     }

@@ -43,9 +43,12 @@ export interface IRunnable {
     run(state: Readonly<ICanvasState>): void;
 }
 
-export interface IMover extends IAttractor, IMovable {
+export interface IEdgeChecker {
+    checkEdges(worldWidth: number, worldHeight: number): void;
+}
+
+export interface IMover extends IAttractor, IMovable, IEdgeChecker {
     frictionCoefficient: number;
-    checkEdges(): void;
     drag(liquid: ILiquid): void;
     isInside(liquid: ILiquid): boolean;
 }
@@ -59,7 +62,7 @@ export interface ISpring extends ICreature, IPlacable {
     connect(bob: Mover): void
 }
 
-export interface IParticle extends ICreature, IPlacable, IMovable, IItem, IRunnable {
+export interface IParticle extends ICreature, IMovable, IItem, IRunnable {
     lifespan: number;
     isAlive(): boolean;
 }
@@ -69,4 +72,14 @@ export interface IParticleSystem extends ICreature, IPlacable, IMovable, IRunnab
     maxParticles: number;
     addParticle(): void;
     applyForceToParticles(force: nj.NdArray): void;
+}
+
+export interface IVehicle extends ICreature, IMovable, IItem, IEdgeChecker {
+    maxVelocity: number;
+    maxSteeringForce: number;
+    seek(location: nj.NdArray): void;
+}
+
+export interface IFlowField extends IEnvironment {
+    getField(location: nj.NdArray): nj.NdArray
 }
