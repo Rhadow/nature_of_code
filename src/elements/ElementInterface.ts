@@ -85,5 +85,6 @@ export interface IFlowField extends IEnvironment {
 }
 
 export interface IPath extends IEnvironment {
+    points: nj.NdArray[];
     radius: number;
 }

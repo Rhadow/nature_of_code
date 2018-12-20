@@ -14,7 +14,8 @@ const vehicleForceFunction = (currentEnvironment: IEnvironment[], creatures: ICr
     });
     const seeker: Vehicle = <Vehicle>creatures[0];
     const wanderer: Vehicle = <Vehicle>creatures[1];
-    seeker.seek(numjs.array([canvasState.mouseX, canvasState.mouseY]));
+    const seekForce = seeker.seek(numjs.array([canvasState.mouseX, canvasState.mouseY]));
+    seeker.applyForce(seekForce);
     wanderer.wander();
     (<Vehicle[]>creatures).forEach((vehicle: Vehicle) => {
         vehicle.run(canvasState);
@@ -84,6 +85,18 @@ const generateFlowFields = (width: number, height: number, resolution: number): 
 }
 
 const pathForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
+    if (canvasState.pressedKey === 'z') {
+        currentEnvironment[0] = new Path(
+            [
+                numjs.array([0, Math.random() * height / 2 + height / 4]),
+                numjs.array([width / 4, Math.random() * height / 2 + height / 4]),
+                numjs.array([width / 2, Math.random() * height / 2 + height / 4]),
+                numjs.array([width * 3 / 4, Math.random() * height / 2 + height / 4]),
+                numjs.array([width, Math.random() * height / 2 + height / 4]),
+            ],
+            Math.random() * 15 + 10
+        )
+    }
     currentEnvironment.forEach((environment: IEnvironment) => {
         environment.display(canvasState);
     });
@@ -93,6 +106,54 @@ const pathForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreat
         vehicle.run(canvasState);
     });
 }
+
+const groupForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
+    currentEnvironment.forEach((environment: IEnvironment) => {
+        environment.display(canvasState);
+    });
+    (<Vehicle[]>creatures).forEach((vehicle: Vehicle) => {
+        vehicle.applyBehaviors(
+            <Vehicle[]>creatures,
+            numjs.array([canvasState.mouseX, canvasState.mouseY]),
+            1,
+            1.1
+        );
+        vehicle.run(canvasState);
+    });
+}
+
+const flockForceFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
+    (<Vehicle[]>creatures).forEach((vehicle: Vehicle) => {
+        vehicle.flock(
+            <Vehicle[]>creatures,
+            1.5,
+            5,
+            2
+        );
+        vehicle.run(canvasState);
+    });
+}
+
+const generateVehicles = (n: number):Vehicle[] => {
+    const result = [];
+    for (let i = 0; i < n; i++) {
+        const w = width / 2 - 100 + Math.random() * 100;
+        const h = height / 2 - 100 + Math.random() * 100;
+        const newVehicle = new Vehicle(
+            15,
+            numjs.array([w, h]),
+            6,
+            0.2
+        );
+        newVehicle.velocity = numjs.array([
+            (Math.random() > 0.5 ? 1 : -1) * Math.random(),
+            (Math.random() > 0.5 ? 1 : -1) * Math.random()
+        ]);
+        result.push(newVehicle);
+    }
+
+    return result;
+};
 
 export const vehicleExperiment = {
     'label': 'Vehicle',
@@ -126,11 +187,32 @@ export const pathExperiment = {
     ],
     'environments': [
         new Path(
-            numjs.array([0, Math.random() * height / 2 + height / 4]),
-            numjs.array([width, Math.random() * height / 2 + height / 4]),
-            25
+            [
+                numjs.array([0, Math.random() * height / 2 + height / 4]),
+                numjs.array([width / 4, Math.random() * height / 2 + height / 4]),
+                numjs.array([width / 2, Math.random() * height / 2 + height / 4]),
+                numjs.array([width * 3 / 4, Math.random() * height / 2 + height / 4]),
+                numjs.array([width, Math.random() * height / 2 + height / 4]),
+            ],
+            Math.random() * 15 + 10
         )
     ],
     'forceFunction': pathForceFunction,
+    'initialForceFunction': () => { }
+};
+
+export const groupExperiment = {
+    'label': 'Group',
+    'creatures': generateVehicles(25),
+    'environments': [],
+    'forceFunction': groupForceFunction,
+    'initialForceFunction': () => { }
+};
+
+export const flockExperiment = {
+    'label': 'Flock',
+    'creatures': generateVehicles(25),
+    'environments': [],
+    'forceFunction': flockForceFunction,
     'initialForceFunction': () => { }
 };

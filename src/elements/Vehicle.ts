@@ -13,7 +13,7 @@ export default class Vehicle implements IVehicle {
     maxVelocity: number;
     maxSteeringForce: number;
     isDebugging: boolean = false;
-    private angle: number = -Math.PI / 4;
+    private angle: number = mapping(Math.random(), 0, 1, 0, Math.PI * 2);
     private targetDistanceThreshold: number = 0;
     private predictDistance: number = 0;
     private predictRadius: number = 0;
@@ -114,7 +114,7 @@ export default class Vehicle implements IVehicle {
         }
     }
 
-    seek(target: nj.NdArray) {
+    seek(target: nj.NdArray): nj.NdArray {
         const desiredVector = target.subtract(this.location);
         const distance = magnitude(desiredVector);
         let desiredVelocity = normalize(desiredVector).multiply(this.maxVelocity);
@@ -124,7 +124,7 @@ export default class Vehicle implements IVehicle {
         }
         const steer = desiredVelocity.subtract(this.velocity);
         const steeringForce = limit(steer, this.maxSteeringForce);
-        this.applyForce(steeringForce);
+        return steeringForce;
     }
 
     wander(): void {
@@ -135,7 +135,8 @@ export default class Vehicle implements IVehicle {
         const xOffset = this.predictRadius * Math.cos(newSubAngle);
         const yOffset = this.predictRadius * Math.sin(newSubAngle);
         this.nextWanderLocation = numjs.array([futureX + xOffset, futureY + yOffset]);
-        this.seek(this.nextWanderLocation);
+        const seekForce = this.seek(this.nextWanderLocation);
+        this.applyForce(seekForce);
         this.isWandering = true;
     }
 
@@ -147,19 +148,166 @@ export default class Vehicle implements IVehicle {
         this.applyForce(steeringForce);
     }
 
-    followPath(path: Path): void {
-        this.isFollowingPath = true;
+    private getClosestNormalFromPath(path: Path): nj.NdArray[] {
         const predictDistance = this.mass * 2;
         const futureX = this.location.get(0) + predictDistance * Math.cos(this.angle);
         const futureY = this.location.get(1) + predictDistance * Math.sin(this.angle);
+        const threshold = Math.min(this.size * 2, 10);
+        let result: nj.NdArray[] = [numjs.array([Infinity, Infinity])];
+        let minResult: nj.NdArray[] = [numjs.array([Infinity, Infinity])];
+        let normalFound: boolean = false;
         this.futurePosition = numjs.array([futureX, futureY]);
-        this.normalPointOnPath = findNormalPoint(path.start, path.end, this.futurePosition);
-        const targetDistanceFromNormal = 15;
-        const distance = magnitude(this.normalPointOnPath.subtract(this.location));
-        const target = normalize(path.end.subtract(path.start)).multiply(targetDistanceFromNormal).add(this.normalPointOnPath);
-        if (distance > path.radius) {
-            this.seek(target);
+        for (let i = 0; i < path.points.length - 1; i++) {
+            const start = path.points[i];
+            const end = path.points[i + 1];
+            if (magnitude(this.futurePosition.subtract(end)) < threshold) {
+                continue;
+            }
+            let normalPoint = findNormalPoint(start, end, this.futurePosition);
+            const isNormalInPath = normalPoint.get(0) >= Math.min(start.get(0), end.get(0)) && normalPoint.get(0) <= Math.max(start.get(0), end.get(0));
+            const currentDistance = magnitude(normalPoint.subtract(this.futurePosition));
+            const minResultDistance = magnitude(minResult[0].subtract(this.futurePosition));
+            if (currentDistance <= minResultDistance) {
+                minResult = [normalPoint, start, end];
+            }
+            if (isNormalInPath) {
+                normalFound = true;
+                const resultDistance = magnitude(result[0].subtract(this.futurePosition));
+                if (currentDistance <= resultDistance) {
+                    result = [normalPoint, start, end];
+                }
+            }
         }
+        if (!normalFound) {
+            result = minResult;
+        }
+        return result;
+    }
+
+    getClosestNormalFromPathV1(path: Path): nj.NdArray[] {
+        const predictDistance = this.mass * 2;
+        const futureX = this.location.get(0) + predictDistance * Math.cos(this.angle);
+        const futureY = this.location.get(1) + predictDistance * Math.sin(this.angle);
+        let result: nj.NdArray[] = [numjs.array([Infinity, Infinity])];
+        this.futurePosition = numjs.array([futureX, futureY]);
+        for (let i = 0; i < path.points.length - 1; i++) {
+            const start = path.points[i];
+            const end = path.points[i + 1];
+            let normalPoint = findNormalPoint(start, end, this.futurePosition);
+            const isNormalInPath = normalPoint.get(0) >= Math.min(start.get(0), end.get(0)) && normalPoint.get(0) <= Math.max(start.get(0), end.get(0));
+            if (!isNormalInPath) {
+                normalPoint = end;
+            }
+            const resultDistance = magnitude(result[0].subtract(this.futurePosition));
+            const currentDistance = magnitude(normalPoint.subtract(this.futurePosition));
+            if (currentDistance <= resultDistance) {
+                result = [normalPoint, start, end];
+            }
+        }
+        return result;
+    }
+
+    followPath(path: Path): void {
+        this.isFollowingPath = true;
+        const [normalPoint, start, end] = this.getClosestNormalFromPathV1(path);
+        // const [normalPoint, start, end] = this.getClosestNormalFromPath(path);
+        this.normalPointOnPath = normalPoint;
+        const targetDistanceFromNormal = 25;
+        const distance = magnitude(this.normalPointOnPath.subtract(this.location));
+        const target = normalize(end.subtract(start)).multiply(targetDistanceFromNormal).add(normalPoint);
+        if (distance > path.radius || magnitude(this.velocity) === 0) {
+            const seekForce = this.seek(target);
+            this.applyForce(seekForce);
+        }
+    }
+
+    seperate(others: Vehicle[]): nj.NdArray {
+        let count: number = 0;
+        let sum: nj.NdArray = numjs.array([0, 0]);
+        let result: nj.NdArray = numjs.array([0, 0]);
+        const separation = 50;
+
+        for (let i = 0; i < others.length; i++) {
+            const otherNode = others[i];
+            const force = this.location.subtract(otherNode.location);
+            const distance = magnitude(force);
+
+            if (distance > 0 && distance < separation) {
+                sum = sum.add(normalize(force));
+                count++;
+            }
+        }
+        if (count > 0) {
+            sum = sum.divide(count);
+            const desiredVelocity = sum.multiply(this.maxVelocity);
+            const steer = desiredVelocity.subtract(this.velocity);
+            result = limit(steer, this.maxSteeringForce);
+        }
+        return result;
+    }
+
+    applyBehaviors(others: Vehicle[], target: nj.NdArray, seekMag: number, seperateMag: number): void {
+        const seekForce = this.seek(target);
+        const seperateForce = this.seperate(others);
+        this.applyForce(seekForce.multiply(seekMag));
+        this.applyForce(seperateForce.multiply(seperateMag));
+    }
+
+    align(others: Vehicle[]): nj.NdArray {
+        let count: number = 0;
+        let sum: nj.NdArray = numjs.array([0, 0]);
+        let result: nj.NdArray = numjs.array([0, 0]);
+        const radius = 50;
+
+        for (let i = 0; i < others.length; i++) {
+            const otherNode = others[i];
+            const force = this.location.subtract(otherNode.location);
+            const distance = magnitude(force);
+
+            if (distance > 0 && distance < radius) {
+                sum = sum.add(others[i].velocity);
+                count++;
+            }
+        }
+        if (count > 0) {
+            sum = normalize(sum.divide(count));
+            const desiredVelocity = sum.multiply(this.maxVelocity);
+            const steer = desiredVelocity.subtract(this.velocity);
+            result = limit(steer, this.maxSteeringForce);
+        }
+        return result;
+    }
+
+    cohesion(others: Vehicle[]): nj.NdArray {
+        let count: number = 0;
+        let sum: nj.NdArray = numjs.array([0, 0]);
+        let result: nj.NdArray = numjs.array([0, 0]);
+        const radius = 50;
+
+        for (let i = 0; i < others.length; i++) {
+            const otherNode = others[i];
+            const force = this.location.subtract(otherNode.location);
+            const distance = magnitude(force);
+
+            if (distance > 0 && distance < radius) {
+                sum = sum.add(otherNode.location);
+                count++;
+            }
+        }
+        if (count > 0) {
+            sum = sum.divide(count);
+            result = this.seek(sum);
+        }
+        return result;
+    }
+
+    flock(others: Vehicle[], seperateMag: number, alignMag: number, cohesionMag: number): void {
+        const seperateForce = this.seperate(others);
+        const alignForce = this.align(others);
+        const cohesionForce = this.cohesion(others);
+        this.applyForce(seperateForce.multiply(seperateMag));
+        this.applyForce(alignForce.multiply(alignMag));
+        this.applyForce(cohesionForce.multiply(cohesionMag));
     }
 
     checkEdges(worldWidth: number, worldHeight: number): void {
