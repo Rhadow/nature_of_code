@@ -1,3 +1,5 @@
+import * as numjs from 'numjs';
+
 type Vector = nj.NdArray;
 
 export const monteCarloRandom = (): number => {
@@ -50,4 +52,12 @@ export const findNormalPoint = (a: Vector, b: Vector, p: Vector):Vector => {
     const theta = angleBetween(ab, ap);
     const distance = normalize(ab).multiply(magnitude(ap) * Math.cos(theta));
     return a.add(distance);
+}
+
+export const rotate = (v: Vector, newAngle: number): Vector => {
+    const originalAngle = Math.atan2(v.get(1), v.get(0));
+    return numjs.array([
+        magnitude(v) * Math.cos(originalAngle + newAngle),
+        magnitude(v) * Math.sin(originalAngle + newAngle),
+    ]);
 }

@@ -1,11 +1,10 @@
 import * as React from "react";
 import cloneDeep from 'lodash.clonedeep';
 import { ICanvasProps, ICanvasState } from './CanvasInterfaces';
-import { experiments } from '../../constants/pages';
+import { experiments, nonRefreshPages } from '../../constants/pages';
 
 export default class Canvas extends React.Component<ICanvasProps, ICanvasState> {
     private canvasRef = React.createRef<HTMLCanvasElement>();
-    private nonRefreshPages:string[] = ['walker', 'mousewalker'];
 
     constructor(props: ICanvasProps) {
         super(props);
@@ -24,7 +23,7 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
 
     draw(): void {
         const { currentCreatures, ctx, currentEnvironment, currentFrame } = this.state;
-        if (!this.nonRefreshPages.includes(this.props.currentPage)) {
+        if (!nonRefreshPages.includes(this.props.currentPage)) {
             ctx!.clearRect(0, 0, this.props.width, this.props.height);
         }
         const initalForceFunction = experiments[this.props.currentPage].initialForceFunction;
@@ -94,7 +93,7 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
     render():JSX.Element {
         return (
             <div>
-                <canvas id="world" ref={this.canvasRef} width={this.props.width} height={this.props.height} />
+                <canvas id="world" ref={this.canvasRef} width={this.props.width} height={this.props.height}/>
             </div>
         );
     }
