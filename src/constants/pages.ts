@@ -7,8 +7,9 @@ import {pendulumExperiment, springExperiment} from '../experiments/pendulum';
 import {particleExperiment} from '../experiments/particle';
 import { vehicleExperiment, flowFieldExperiment, pathExperiment, groupExperiment, flockExperiment} from '../experiments/vehicle';
 import { cellExperiment, fractalExperiment } from '../experiments/cell';
+import { geneticExperiment, bloopExperiment } from '../experiments/genetic';
 
-export const defaultPage = 'fractal';
+export const defaultPage = 'bloop';
 export const nonRefreshPages: string[] = ['walker', 'mousewalker', 'cell', 'fractal'];
 
 export interface IPageLabelMapping {
@@ -27,6 +28,8 @@ export interface IPageLabelMapping {
     'flock': string,
     'cell': string,
     'fractal': string,
+    'genetic': string,
+    'bloop': string,
     [key: string]: string;
 }
 
@@ -45,7 +48,9 @@ export const pages: string[] = [
     'group',
     'flock',
     'cell',
-    'fractal'
+    'fractal',
+    'genetic',
+    'bloop'
 ];
 
 interface IExperiment {
@@ -72,4 +77,6 @@ export const experiments: {[K in keyof IPageLabelMapping]:IExperiment} = {
     'flock': flockExperiment,
     'cell': cellExperiment,
     'fractal': fractalExperiment,
+    'genetic': geneticExperiment,
+    'bloop': bloopExperiment,
 }

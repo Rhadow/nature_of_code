@@ -2,6 +2,8 @@ import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
 import Mover from './Mover';
 import Particle from './Particle';
 
+type Vector = nj.NdArray;
+
 export interface IEnvironment {
     display(state: Readonly<ICanvasState>): void;
 }
@@ -87,4 +89,31 @@ export interface IFlowField extends IEnvironment {
 export interface IPath extends IEnvironment {
     points: nj.NdArray[];
     radius: number;
+}
+
+export interface IDNA<T> {
+    genes: T[];
+    crossover(partner: IDNA<T>): IDNA<T>;
+    mutate(mutationRate: number): void;
+}
+
+export interface ILiving<T> extends ICreature, IMovable, IRunnable {
+    dna: IDNA<T>;
+    stopped: boolean;
+    hasReachedTarget: boolean;
+    fitness(target: T): number;
+}
+
+export interface IPopulation<T> {
+    fitness(target: T): void;
+    selection(): void;
+    reproduction(): void;
+}
+
+export interface IObstacle extends IEnvironment {
+    contains(creature: IPlacable): boolean
+}
+
+export interface IBloop extends ILiving<number>, IEdgeChecker {
+    isDead(): boolean;
 }

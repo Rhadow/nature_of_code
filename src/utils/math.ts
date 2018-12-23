@@ -61,3 +61,9 @@ export const rotate = (v: Vector, newAngle: number): Vector => {
         magnitude(v) * Math.sin(originalAngle + newAngle),
     ]);
 }
+
+export const featureScaling = (nums: number[]): number[] => {
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    return nums.map(n => (n - min) / (max - min));
+}

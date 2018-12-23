@@ -2,7 +2,8 @@ import * as numjs from 'numjs';
 import { ICanvasState } from '../components/Canvas/CanvasInterfaces';
 import { ICreature, IEnvironment } from "../elements/ElementInterface";
 import KochLine from '../elements/KochLine';
-import { magnitude, normalize, rotate } from '../utils/math';
+import { magnitude, normalize, rotate, mapping } from '../utils/math';
+import { height } from '../constants/world';
 
 type Vector = nj.NdArray;
 
@@ -98,31 +99,62 @@ const generateNextLines = ():KochLine[] => {
     return next;
 };
 
+const branch = (len: number, ctx: CanvasRenderingContext2D): void => {
+    if (len > 2) {
+        const branchNumbers = Math.floor(Math.random() * 3) + 1;
+
+        ctx.translate(0, 0);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -len);
+        ctx.stroke();
+        ctx.translate(0, -len);
+
+        for (let j = 0; j < branchNumbers; j++) {
+            const branchAngle = mapping(Math.random(), 0, 1, -Math.PI / 2, Math.PI / 2);
+            const branchLengthFactor = mapping(Math.random(), 0, 1, 0.33, 0.66);
+            ctx.save();
+            ctx.rotate(branchAngle);
+            branch(len * branchLengthFactor, ctx);
+            ctx.restore();
+        }
+    }
+}
+
 const fractalFunction = (currentEnvironment: IEnvironment[], creatures: ICreature[], canvasState: ICanvasState) => {
     const { worldWidth, worldHeight, currentFrame, pressedKey, ctx } = canvasState;
+    const lineLength = 80;
+    const treeLength = 100;
     if (currentFrame === 0) {
         counter = 0;
         lines = [
             new KochLine(
-                numjs.array([worldWidth / 2 - 100, worldHeight / 2 - 100]),
-                numjs.array([worldWidth / 2 + 100, worldHeight / 2 - 100]),
+                numjs.array([worldWidth / 3 - lineLength, worldHeight / 3 - lineLength]),
+                numjs.array([worldWidth / 3 + lineLength, worldHeight / 3 - lineLength]),
             ),
             new KochLine(
-                numjs.array([worldWidth / 2 + 100, worldHeight / 2 - 100]),
-                numjs.array([worldWidth / 2 + 100, worldHeight / 2 + 100]),
+                numjs.array([worldWidth / 3 + lineLength, worldHeight / 3 - lineLength]),
+                numjs.array([worldWidth / 3 + lineLength, worldHeight / 3 + lineLength]),
             ),
             new KochLine(
-                numjs.array([worldWidth / 2 + 100, worldHeight / 2 + 100]),
-                numjs.array([worldWidth / 2 - 100, worldHeight / 2 + 100]),
+                numjs.array([worldWidth / 3 + lineLength, worldHeight / 3 + lineLength]),
+                numjs.array([worldWidth / 3 - lineLength, worldHeight / 3 + lineLength]),
             ),
             new KochLine(
-                numjs.array([worldWidth / 2 - 100, worldHeight / 2 + 100]),
-                numjs.array([worldWidth / 2 - 100, worldHeight / 2 - 100]),
+                numjs.array([worldWidth / 3 - lineLength, worldHeight / 3 + lineLength]),
+                numjs.array([worldWidth / 3 - lineLength, worldHeight / 3 - lineLength]),
             )
         ];
         lines.forEach((line: KochLine) => {
             line.display(canvasState);
         });
+        // Draw tree
+        if (ctx) {
+            ctx.save();
+            ctx.translate(worldWidth / 4 * 3, worldHeight);
+            branch(treeLength, ctx);
+            ctx.restore();
+        }
     } else {
         if (pressedKey === 'z' && counter < 6 && ctx) {
             ctx.clearRect(0, 0, worldWidth, worldHeight);
@@ -131,6 +163,11 @@ const fractalFunction = (currentEnvironment: IEnvironment[], creatures: ICreatur
                 line.display(canvasState);
             });
             counter++;
+            // Draw tree
+            ctx.save();
+            ctx.translate(worldWidth / 4 * 3, worldHeight);
+            branch(treeLength, ctx);
+            ctx.restore();
         }
     }
 };
